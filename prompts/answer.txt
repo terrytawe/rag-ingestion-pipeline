@@ -1,0 +1,9 @@
+Answer the question based only on the following context:
+
+{context}
+
+Question: {question}
+
+Answer:
+
+Make sure to answer in the most concise manner, and if you do not know the answer just say "I don't know"
