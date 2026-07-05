@@ -1,5 +1,6 @@
 from langchain_ollama.embeddings import OllamaEmbeddings
 from langchain_anthropic import ChatAnthropic
+from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -71,7 +72,8 @@ def build_rag_chain():
         },
     )
 
-    llm = ChatAnthropic(model_name="claude-sonnet-5")
+    # llm = ChatAnthropic(model_name="claude-sonnet-5")
+    llm = ChatOllama(model="qwen3.6:27b-mlx-bf16") # Vram issues on current machine
 
     answer_template = Path("prompts/answer.txt").read_text()
     prompt = ChatPromptTemplate.from_template(answer_template)

@@ -46,7 +46,7 @@ CHUNK_SIZE = 800
 CHUNK_OVERLAP = 120
 
 LOADER_MAP = {
-    ".pdf": PyMuPDFLoader,
+    ".pdf": PyMuPDFLoader, # changed from PyPDFLoader to PyMuPDFLoader for better image extraction
     ".docx": Docx2txtLoader,
     ".txt": TextLoader,
     ".md": TextLoader,

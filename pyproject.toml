@@ -15,5 +15,6 @@ dependencies = [
     "pymupdf>=1.26.5",
     "pypdf>=6.14.2",
     "python-dotenv>=1.2.2",
+    "rapidocr>=3.9.1",
     "rapidocr-onnxruntime>=1.4.4",
 ]
