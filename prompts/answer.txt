@@ -1,9 +1,15 @@
-Answer the question based only on the following context:
+Answer the question based only on the following context blocks:
 
 {context}
 
 Question: {question}
 
+Instructions:
+- Use only information present in the context blocks.
+- For every factual claim, add one or more citations using block ids, for example [1] or [2][4].
+- Prefer blocks where modality=image_summary when the user asks about charts, diagrams, screenshots, or visual layout.
+- If the answer is not supported by context, reply exactly: I don't know
+
 Answer:
 
-Make sure to answer in the most concise manner, and if you do not know the answer just say "I don't know"
+Keep the answer concise.

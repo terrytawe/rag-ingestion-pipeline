@@ -5,5 +5,7 @@ langchain-ollama
 langchain-anthropic
 chromadb
 pypdf
+pymupdf
+rapidocr-onnxruntime
 docx2txt
 python-dotenv

@@ -7,7 +7,15 @@ from langchain_chroma import Chroma
 from pathlib import Path
 from dotenv import load_dotenv
 
-from config import CHROMA_DIR, COLLECTION_NAME, EMBEDDING_MODEL
+from config import (
+    CHROMA_DIR,
+    COLLECTION_NAME,
+    EMBEDDING_MODEL,
+    RETRIEVAL_SEARCH_TYPE,
+    RETRIEVAL_K,
+    RETRIEVAL_FETCH_K,
+    RETRIEVAL_LAMBDA_MULT,
+)
 
 load_dotenv()
 
@@ -28,7 +36,21 @@ def get_vector_store() -> Chroma:
 
 
 def format_docs(docs):
-    return "\n\n".join([doc.page_content for doc in docs])
+    formatted = []
+    for idx, doc in enumerate(docs, start=1):
+        source = doc.metadata.get("source_path", "unknown")
+        page = doc.metadata.get("page")
+        modality = doc.metadata.get("modality", "text")
+
+        page_display = "n/a"
+        if isinstance(page, int):
+            page_display = str(page + 1)
+
+        formatted.append(
+            f"[{idx}] source={source}; page={page_display}; modality={modality}\n{doc.page_content}"
+        )
+
+    return "\n\n".join(formatted)
 
 
 def build_rag_chain():
@@ -40,7 +62,14 @@ def build_rag_chain():
     ever had a command line interface at all.
     """
     vector_store = get_vector_store()
-    retriever = vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 4})
+    retriever = vector_store.as_retriever(
+        search_type=RETRIEVAL_SEARCH_TYPE,
+        search_kwargs={
+            "k": RETRIEVAL_K,
+            "fetch_k": RETRIEVAL_FETCH_K,
+            "lambda_mult": RETRIEVAL_LAMBDA_MULT,
+        },
+    )
 
     llm = ChatAnthropic(model_name="claude-sonnet-5")
 
