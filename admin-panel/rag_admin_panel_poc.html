@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAG Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-app: #10131A;
+    --bg-sidebar: #0A0C11;
+    --bg-panel: #171B24;
+    --bg-panel-alt: #1D212C;
+    --bg-input: #12151D;
+    --border: #262B38;
+    --border-strong: #363D4E;
+    --text-primary: #EDEEF2;
+    --text-secondary: #9199AB;
+    --text-tertiary: #5B6377;
+    --accent: #E8A33C;
+    --accent-soft: rgba(232, 163, 60, 0.14);
+    --accent-strong: #F2B75A;
+    --success: #4FBD8C;
+    --success-soft: rgba(79, 189, 140, 0.14);
+    --danger: #E2645A;
+    --danger-soft: rgba(226, 100, 90, 0.14);
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg-app);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--accent-strong); }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  button, input, select, textarea { font-family: inherit; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ---------- Sidebar ---------- */
+
+  .sidebar {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 16px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 8px 24px 8px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .brand-mark {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: 0.01em;
+  }
+
+  .brand-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    padding: 10px 8px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+
+  .nav-item:hover { background: var(--bg-panel); color: var(--text-primary); }
+
+  .nav-item.active {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  .nav-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-tertiary);
+    width: 18px;
+    flex-shrink: 0;
+  }
+
+  .nav-item.active .nav-num { color: var(--accent-strong); }
+
+  .nav-label { font-size: 13px; font-weight: 500; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 14px 8px 0 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .env-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .env-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* ---------- Main ---------- */
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* Pipeline flow bar: the signature element */
+
+  .flowbar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: rgba(16, 19, 26, 0.92);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    align-items: center;
+    overflow-x: auto;
+  }
+
+  .flow-track {
+    display: flex;
+    align-items: center;
+    position: relative;
+    min-width: max-content;
+  }
+
+  .flow-line {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    right: 5px;
+    height: 1px;
+    background: var(--border-strong);
+    z-index: 0;
+  }
+
+  .flow-pulse {
+    position: absolute;
+    top: 3px;
+    left: 5px;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent-strong);
+    box-shadow: 0 0 8px 1px rgba(232, 163, 60, 0.6);
+    animation: travel 7s linear infinite;
+  }
+
+  @keyframes travel {
+    0% { left: 5px; opacity: 0; }
+    5% { opacity: 1; }
+    95% { opacity: 1; }
+    100% { left: calc(100% - 10px); opacity: 0; }
+  }
+
+  .flow-node {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    z-index: 1;
+    color: var(--text-tertiary);
+  }
+
+  .flow-node + .flow-node { margin-left: 28px; }
+
+  .flow-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: var(--bg-app);
+    border: 1.5px solid var(--border-strong);
+    flex-shrink: 0;
+    transition: border-color 0.2s ease, background 0.2s ease;
+  }
+
+  .flow-node.active .flow-dot {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .flow-node-label {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    transition: color 0.2s ease;
+  }
+
+  .flow-node.active .flow-node-label { color: var(--accent-strong); }
+  .flow-node:hover .flow-node-label { color: var(--text-primary); }
+
+  .content {
+    padding: 32px 40px 80px 40px;
+    max-width: 1120px;
+  }
+
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.25s ease; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-head { margin-bottom: 28px; }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+  }
+
+  .section-sub {
+    color: var(--text-secondary);
+    font-size: 14px;
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  /* ---------- Shared components ---------- */
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  .card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 22px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+  }
+
+  .card-note {
+    font-size: 12.5px;
+    color: var(--text-tertiary);
+    margin: 0 0 16px 0;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+  }
+
+  .field-value {
+    font-family: var(--font-mono);
+    color: var(--accent-strong);
+    font-size: 12.5px;
+  }
+
+  select, .text-input {
+    width: 100%;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 9px 11px;
+    font-size: 13px;
+  }
+
+  select:hover, .text-input:hover { border-color: var(--text-tertiary); }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 3px;
+    background: var(--border-strong);
+    border-radius: 2px;
+    outline: none;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg-panel);
+    box-shadow: 0 0 0 1px var(--accent);
+  }
+
+  input[type="range"]:disabled::-webkit-slider-thumb { background: var(--text-tertiary); box-shadow: none; }
+  input[type="range"]::-moz-range-thumb {
+    width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: none; cursor: pointer;
+  }
+
+  .btn {
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px;
+    cursor: pointer;
+    border: 1px solid var(--border-strong);
+    background: var(--bg-panel-alt);
+    color: var(--text-primary);
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .btn:hover { border-color: var(--text-tertiary); }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #1B1300;
+    border-color: var(--accent);
+    font-weight: 600;
+  }
+
+  .btn-primary:hover { background: var(--accent-strong); }
+
+  .btn-row { display: flex; gap: 10px; }
+
+  /* Segmented control */
+  .segmented {
+    display: inline-flex;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    padding: 3px;
+    gap: 3px;
+  }
+
+  .segmented button {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 7px 14px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .segmented button.active {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative;
+    width: 38px;
+    height: 21px;
+    flex-shrink: 0;
+  }
+
+  .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: var(--border-strong);
+    border-radius: 20px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .toggle-track::before {
+    content: "";
+    position: absolute;
+    width: 15px; height: 15px;
+    left: 3px; top: 3px;
+    background: var(--text-primary);
+    border-radius: 50%;
+    transition: transform 0.15s ease;
+  }
+
+  .toggle input:checked + .toggle-track { background: var(--accent); }
+  .toggle input:checked + .toggle-track::before { transform: translateX(17px); background: #1B1300; }
+
+  /* Radio card group */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .radio-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 12.5px;
+  }
+
+  .radio-card:hover { border-color: var(--text-tertiary); }
+  .radio-card.selected { border-color: var(--accent); background: var(--accent-soft); }
+
+  .radio-dot {
+    width: 13px; height: 13px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-strong);
+    flex-shrink: 0;
+    position: relative;
+  }
+
+  .radio-card.selected .radio-dot { border-color: var(--accent); }
+  .radio-card.selected .radio-dot::after {
+    content: "";
+    position: absolute;
+    inset: 2px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .radio-name { font-weight: 500; color: var(--text-primary); }
+  .radio-meta { color: var(--text-tertiary); font-family: var(--font-mono); font-size: 11px; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; }
+
+  th {
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    padding: 0 12px 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12.5px;
+    color: var(--text-primary);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .mono { font-family: var(--font-mono); color: var(--text-secondary); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 4px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .badge-dot { width: 6px; height: 6px; border-radius: 50%; }
+
+  .badge-success { background: var(--success-soft); color: var(--success); }
+  .badge-success .badge-dot { background: var(--success); }
+  .badge-danger { background: var(--danger-soft); color: var(--danger); }
+  .badge-danger .badge-dot { background: var(--danger); }
+  .badge-processing { background: var(--accent-soft); color: var(--accent-strong); }
+  .badge-processing .badge-dot { background: var(--accent); animation: pulse 1.2s ease-in-out infinite; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Dropzone */
+  .dropzone {
+    border: 1.5px dashed var(--border-strong);
+    border-radius: var(--radius-md);
+    padding: 30px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+
+  .dropzone.dragging { border-color: var(--accent); background: var(--accent-soft); }
+  .dropzone:hover { border-color: var(--text-tertiary); }
+
+  .dropzone-title { font-size: 13px; font-weight: 500; margin: 0 0 4px 0; }
+  .dropzone-sub { font-size: 12px; color: var(--text-tertiary); margin: 0; }
+
+  /* KPI */
+  .kpi-row { display: flex; gap: 16px; }
+  .kpi {
+    flex: 1;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 20px;
+  }
+  .kpi-label {
+    font-size: 11.5px;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+  }
+  .kpi-value {
+    font-family: var(--font-mono);
+    font-size: 30px;
+    font-weight: 500;
+  }
+  .kpi-value.success { color: var(--success); }
+  .kpi-value.danger { color: var(--danger); }
+
+  /* Tag pill */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    padding: 3px 8px 3px 10px;
+    border-radius: 20px;
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border-strong);
+    color: var(--text-secondary);
+  }
+  .pill-confidential { border-color: rgba(226,100,90,0.4); color: var(--danger); }
+  .pill-public { border-color: rgba(79,189,140,0.4); color: var(--success); }
+  .pill-hr { border-color: rgba(232,163,60,0.4); color: var(--accent-strong); }
+
+  .pill-remove {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 13px;
+    line-height: 1;
+    padding: 0;
+    opacity: 0.6;
+  }
+  .pill-remove:hover { opacity: 1; }
+
+  .doc-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+  .doc-row:last-child { border-bottom: none; }
+  .doc-name { font-size: 12.5px; }
+  .doc-tags { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+
+  /* RBAC matrix */
+  .rbac-table th, .rbac-table td { text-align: center; }
+  .rbac-table th:first-child, .rbac-table td:first-child { text-align: left; }
+  .checkbox {
+    width: 16px; height: 16px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  textarea {
+    width: 100%;
+    min-height: 150px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    color: var(--text-primary);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: vertical;
+  }
+
+  .char-count { font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); text-align: right; margin-top: 6px; }
+
+  .search-input-wrap { position: relative; margin-bottom: 14px; }
+  .search-input-wrap svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); opacity: 0.4; }
+  .search-input-wrap input { padding-left: 34px; }
+
+  .conn-row { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); box-shadow: 0 0 6px 1px rgba(79,189,140,0.5); }
+  .conn-dot.off { background: var(--danger); box-shadow: 0 0 6px 1px rgba(226,100,90,0.5); }
+  .conn-text { font-size: 12.5px; }
+  .conn-count { font-family: var(--font-mono); color: var(--text-tertiary); font-size: 12px; margin-left: auto; }
+
+  .desc-box {
+    background: var(--bg-panel-alt);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-top: 14px;
+  }
+
+  .log-feed { max-height: 320px; overflow-y: auto; }
+  .log-row { padding: 12px 0; border-bottom: 1px solid var(--border); }
+  .log-row:last-child { border-bottom: none; }
+  .log-row.new { animation: rowIn 0.4s ease; }
+  @keyframes rowIn { from { background: var(--accent-soft); } to { background: transparent; } }
+  .log-query { font-size: 12.5px; font-weight: 500; margin-bottom: 4px; }
+  .log-meta { display: flex; gap: 14px; font-family: var(--font-mono); font-size: 11px; color: var(--text-tertiary); }
+  .log-latency { color: var(--accent-strong); }
+
+  .chart-card { margin-top: 20px; }
+  .chart-legend { display: flex; gap: 16px; margin-bottom: 6px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-secondary); cursor: pointer; user-select: none; }
+  .legend-item.hidden { opacity: 0.35; }
+  .legend-swatch { width: 10px; height: 3px; border-radius: 2px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .flow-pulse, .badge-processing .badge-dot { animation: none !important; }
+    .section.active { animation: none !important; }
+  }
+
+  @media (max-width: 880px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; flex-direction: row; overflow-x: auto; padding: 12px; }
+    .brand { display: none; }
+    .nav-list { flex-direction: row; }
+    .sidebar-footer { display: none; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .content { padding: 24px 20px 60px 20px; }
+    .kpi-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-mark">RAG Console</span>
+      <span class="brand-sub">Admin panel POC</span>
+    </div>
+    <ul class="nav-list">
+      <li><button class="nav-item active" data-target="kb"><span class="nav-num">01</span><span class="nav-label">Knowledge Base</span></button></li>
+      <li><button class="nav-item" data-target="vector"><span class="nav-num">02</span><span class="nav-label">Vector DB &amp; Search</span></button></li>
+      <li><button class="nav-item" data-target="retrieval"><span class="nav-num">03</span><span class="nav-label">Retrieval Parameters</span></button></li>
+      <li><button class="nav-item" data-target="prompt"><span class="nav-num">04</span><span class="nav-label">Prompt &amp; Model Tuning</span></button></li>
+      <li><button class="nav-item" data-target="security"><span class="nav-num">05</span><span class="nav-label">Security &amp; Access</span></button></li>
+      <li><button class="nav-item" data-target="observability"><span class="nav-num">06</span><span class="nav-label">Observability</span></button></li>
+    </ul>
+    <div class="sidebar-footer">
+      <span class="env-badge"><span class="env-dot"></span>Mock environment, no backend</span>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="flowbar">
+      <div class="flow-track">
+        <div class="flow-line"></div>
+        <div class="flow-pulse"></div>
+        <button class="flow-node active" data-target="kb"><span class="flow-dot"></span><span class="flow-node-label">Ingest</span></button>
+        <button class="flow-node" data-target="vector"><span class="flow-dot"></span><span class="flow-node-label">Embed</span></button>
+        <button class="flow-node" data-target="retrieval"><span class="flow-dot"></span><span class="flow-node-label">Retrieve</span></button>
+        <button class="flow-node" data-target="prompt"><span class="flow-dot"></span><span class="flow-node-label">Generate</span></button>
+        <button class="flow-node" data-target="security"><span class="flow-dot"></span><span class="flow-node-label">Secure</span></button>
+        <button class="flow-node" data-target="observability"><span class="flow-dot"></span><span class="flow-node-label">Observe</span></button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- 01 KNOWLEDGE BASE -->
+      <section class="section active" id="kb">
+        <div class="section-head">
+          <div class="eyebrow">01 / Ingest</div>
+          <h1 class="section-title">Knowledge Base</h1>
+          <p class="section-sub">Add source documents and choose how they are split into chunks before embedding.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="card-title">Add documents</h3>
+            <p class="card-note">Drop files or pull content from a public URL.</p>
+
+            <div class="dropzone" id="dropzone">
+              <p class="dropzone-title">Drag files here, or click to browse</p>
+              <p class="dropzone-sub">PDF, TXT, DOCX, MD</p>
+            </div>
+            <input type="file" id="fileInput" multiple style="display:none">
+
+            <div class="field" style="margin-top: 18px;">
+              <label class="field-label">Sync from a URL</label>
+              <div class="btn-row">
+                <input type="text" class="text-input" id="urlInput" placeholder="https://example.com/handbook">
+                <button class="btn btn-primary" id="urlSyncBtn">Sync</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Chunking strategy</h3>
+            <p class="card-note">Controls how documents are divided before they are embedded.</p>
+
+            <div class="field">
+              <label class="field-label">Method</label>
+              <select id="chunkMethod">
+                <option value="fixed">Fixed size</option>
+                <option value="semantic">Semantic</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label class="field-label">Chunk size <span class="field-value"><span id="chunkSizeVal">500</span> tokens</span></label>
+              <input type="range" id="chunkSize" min="100" max="2000" step="50" value="500">
+            </div>
+
+            <div class="field">
+              <label class="field-label">Chunk overlap <span class="field-value"><span id="chunkOverlapVal">50</span> tokens</span></label>
+              <input type="range" id="chunkOverlap" min="0" max="500" step="10" value="50">
+            </div>
+            <div class="desc-box" id="chunkDesc">Fixed size splits text into equal token blocks with a shared overlap between neighbours.</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 class="card-title">Document status</h3>
+          <p class="card-note">Every source currently tracked by the pipeline.</p>
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Size</th><th>Uploaded</th><th>Source</th><th>Status</th></tr>
+            </thead>
+            <tbody id="docTableBody">
+              <tr>
+                <td>Vendor_Master_Agreement.pdf</td><td class="mono">2.4 MB</td><td class="mono">2026-07-01</td><td class="mono">Upload</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span>Success</span></td>
+              </tr>
+              <tr>
+                <td>Employee_Handbook_2026.docx</td><td class="mono">860 KB</td><td class="mono">2026-07-02</td><td class="mono">Upload</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span>Success</span></td>
+              </tr>
+              <tr>
+                <td>company-intranet.com/policies</td><td class="mono">-</td><td class="mono">2026-07-03</td><td class="mono">Web</td>
+                <td><span class="badge badge-success"><span class="badge-dot"></span>Success</span></td>
+              </tr>
+              <tr>
+                <td>Q2_Financial_Summary.pdf</td><td class="mono">1.1 MB</td><td class="mono">2026-07-05</td><td class="mono">Upload</td>
+                <td><span class="badge badge-danger"><span class="badge-dot"></span>Failed</span></td>
+              </tr>
+              <tr id="processingRow">
+                <td>Integration_Suite_Notes.md</td><td class="mono">340 KB</td><td class="mono">2026-07-06</td><td class="mono">Upload</td>
+                <td><span class="badge badge-processing"><span class="badge-dot"></span>Processing</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 02 VECTOR DB & SEARCH -->
+      <section class="section" id="vector">
+        <div class="section-head">
+          <div class="eyebrow">02 / Embed</div>
+          <h1 class="section-title">Vector Database &amp; Search</h1>
+          <p class="section-sub">Choose how text becomes vectors and how the system finds matches.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="card-title">Embedding model</h3>
+            <p class="card-note">Applies to newly ingested documents.</p>
+            <div class="radio-group" id="embedGroup">
+              <div class="radio-card selected" data-value="openai">
+                <span class="radio-dot"></span>
+                <div>
+                  <div class="radio-name">text-embedding-3-small</div>
+                  <div class="radio-meta">OpenAI, hosted, 1536 dim</div>
+                </div>
+              </div>
+              <div class="radio-card" data-value="bge">
+                <span class="radio-dot"></span>
+                <div>
+                  <div class="radio-name">bge-small-en-v1.5</div>
+                  <div class="radio-meta">Hugging Face, local, 384 dim</div>
+                </div>
+              </div>
+              <div class="radio-card" data-value="minilm">
+                <span class="radio-dot"></span>
+                <div>
+                  <div class="radio-name">all-MiniLM-L6-v2</div>
+                  <div class="radio-meta">Hugging Face, local, 384 dim</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Vector database</h3>
+            <p class="card-note">Connection used for storage and lookup.</p>
+            <div class="field">
+              <label class="field-label">Engine</label>
+              <select id="dbEngine">
+                <option>Chroma</option>
+                <option>Pinecone</option>
+                <option>Qdrant</option>
+              </select>
+            </div>
+            <div class="conn-row">
+              <span class="conn-dot" id="connDot"></span>
+              <span class="conn-text" id="connText">Connected</span>
+              <span class="conn-count"><span id="vectorCount">128,402</span> vectors</span>
+            </div>
+            <button class="btn" id="reconnectBtn">Reconnect</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 class="card-title">Search strategy</h3>
+          <p class="card-note">How chunks are matched against an incoming query.</p>
+          <div class="segmented" id="searchSegment">
+            <button class="active" data-value="semantic">Semantic</button>
+            <button data-value="keyword">Keyword</button>
+            <button data-value="hybrid">Hybrid</button>
+          </div>
+          <div class="desc-box" id="searchDesc">Semantic search compares vector distance between the query and stored chunks.</div>
+        </div>
+      </section>
+
+      <!-- 03 RETRIEVAL PARAMETERS -->
+      <section class="section" id="retrieval">
+        <div class="section-head">
+          <div class="eyebrow">03 / Retrieve</div>
+          <h1 class="section-title">Retrieval Parameters</h1>
+          <p class="section-sub">Control how many chunks come back and how strictly they are filtered.</p>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3 class="card-title">Result volume</h3>
+            <p class="card-note">Applied to every query before generation.</p>
+
+            <div class="field">
+              <label class="field-label">Top-K <span class="field-value"><span id="topKVal">6</span> chunks</span></label>
+              <input type="range" id="topK" min="1" max="20" step="1" value="6">
+            </div>
+
+            <div class="field">
+              <label class="field-label">Score threshold <span class="field-value"><span id="thresholdVal">0.45</span></span></label>
+              <input type="range" id="threshold" min="0" max="1" step="0.05" value="0.45">
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">Reranker</h3>
+            <p class="card-note">Reorders retrieved chunks before they reach the model.</p>
+            <div class="field" style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 0;">
+              <label class="field-label" style="margin-bottom:0;">Enable reranking step</label>
+              <label class="toggle">
+                <input type="checkbox" id="rerankToggle">
+                <span class="toggle-track"></span>
+              </label>
+            </div>
+            <div class="field" id="rerankModelField" style="display:none; margin-top:18px;">
+              <label class="field-label">Reranker model</label>
+              <select id="rerankModel">
+                <option>Cohere Rerank 3</option>
+                <option>bge-reranker-base</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 04 PROMPT & MODEL TUNING -->
+      <section class="section" id="prompt">
+        <div class="section-head">
+          <div class="eyebrow">04 / Generate</div>
+          <h1 class="section-title">Prompt &amp; Model Tuning</h1>
+          <p class="section-sub">Pick the model that answers questions and set the instructions it follows.</p>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Model</h3>
+          <div class="segmented" id="llmSegment">
+            <button class="active" data-value="gpt4o">GPT-4o</button>
+            <button data-value="claude">Claude 3.5 Sonnet</button>
+            <button data-value="llama3">Llama 3</button>
+          </div>
+        </div>
+
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card">
+            <h3 class="card-title">Temperature</h3>
+            <p class="card-note" id="tempDesc">Balanced, mostly factual with some flexibility.</p>
+            <div class="field">
+              <label class="field-label">Value <span class="field-value" id="tempVal">0.30</span></label>
+              <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.3">
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">Max tokens</h3>
+            <p class="card-note">Upper limit for a single generated answer.</p>
+            <div class="field">
+              <label class="field-label">Limit <span class="field-value"><span id="maxTokensVal">1024</span> tokens</span></label>
+              <input type="range" id="maxTokens" min="256" max="4096" step="128" value="1024">
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 class="card-title">System prompt</h3>
+          <p class="card-note">Instructions sent to the model ahead of every retrieved context.</p>
+          <textarea id="systemPrompt">Answer the question using only the provided context.
+If the answer is not present in the context, say "I cannot find that in the documents."
+Cite the source document name when possible. Do not speculate beyond what the context supports.</textarea>
+          <div class="char-count"><span id="charCount">0</span> characters</div>
+        </div>
+      </section>
+
+      <!-- 05 SECURITY & ACCESS -->
+      <section class="section" id="security">
+        <div class="section-head">
+          <div class="eyebrow">05 / Secure</div>
+          <h1 class="section-title">Security &amp; Access Control</h1>
+          <p class="section-sub">Decide who can see which documents and what each role can do.</p>
+        </div>
+
+        <div class="card">
+          <h3 class="card-title">Role permissions</h3>
+          <p class="card-note">Super Admin permissions are fixed and cannot be revoked.</p>
+          <table class="rbac-table">
+            <thead>
+              <tr><th>Permission</th><th>Super Admin</th><th>Content Manager</th><th>End User</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>View documents</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox" checked></td><td><input type="checkbox" class="checkbox" checked></td></tr>
+              <tr><td>Upload documents</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox" checked></td><td><input type="checkbox" class="checkbox"></td></tr>
+              <tr><td>Delete documents</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox"></td><td><input type="checkbox" class="checkbox"></td></tr>
+              <tr><td>Edit prompts &amp; model settings</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox"></td><td><input type="checkbox" class="checkbox"></td></tr>
+              <tr><td>Manage users</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox"></td><td><input type="checkbox" class="checkbox"></td></tr>
+              <tr><td>View analytics</td><td><input type="checkbox" class="checkbox" checked disabled></td><td><input type="checkbox" class="checkbox" checked></td><td><input type="checkbox" class="checkbox"></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="grid-2" style="margin-top: 20px;">
+          <div class="card">
+            <h3 class="card-title">Document tags</h3>
+            <p class="card-note">Clearance level attached to each source.</p>
+            <div id="docTagList">
+              <div class="doc-row">
+                <span class="doc-name">Vendor_Master_Agreement.pdf</span>
+                <span class="doc-tags" data-doc="0"><span class="pill pill-confidential">Confidential<button class="pill-remove">&times;</button></span></span>
+              </div>
+              <div class="doc-row">
+                <span class="doc-name">Employee_Handbook_2026.docx</span>
+                <span class="doc-tags" data-doc="1"><span class="pill pill-hr">HR-Only<button class="pill-remove">&times;</button></span></span>
+              </div>
+              <div class="doc-row">
+                <span class="doc-name">company-intranet.com/policies</span>
+                <span class="doc-tags" data-doc="2"><span class="pill pill-public">Public<button class="pill-remove">&times;</button></span></span>
+              </div>
+              <div class="doc-row">
+                <span class="doc-name">Integration_Suite_Notes.md</span>
+                <span class="doc-tags" data-doc="3"><span class="pill pill-confidential">Confidential<button class="pill-remove">&times;</button></span></span>
+              </div>
+            </div>
+            <div class="field" style="margin-top: 14px;">
+              <label class="field-label">Add tag to a document</label>
+              <div class="btn-row">
+                <select id="tagDocSelect" style="flex:1;"></select>
+                <select id="tagValueSelect" style="flex:1;">
+                  <option value="confidential">Confidential</option>
+                  <option value="public">Public</option>
+                  <option value="hr">HR-Only</option>
+                </select>
+                <button class="btn" id="addTagBtn">Add</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">User access</h3>
+            <p class="card-note">Search and adjust individual permissions.</p>
+            <div class="search-input-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" class="text-input" id="userSearch" placeholder="Search by name or email">
+            </div>
+            <table>
+              <thead><tr><th>User</th><th>Role</th></tr></thead>
+              <tbody id="userTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 06 OBSERVABILITY -->
+      <section class="section" id="observability">
+        <div class="section-head">
+          <div class="eyebrow">06 / Observe</div>
+          <h1 class="section-title">Observability &amp; Analytics</h1>
+          <p class="section-sub">Watch queries as they happen and track cost over time.</p>
+        </div>
+
+        <div class="kpi-row">
+          <div class="kpi">
+            <div class="kpi-label">Thumbs up</div>
+            <div class="kpi-value success" id="thumbsUpVal">1,284</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Thumbs down</div>
+            <div class="kpi-value danger" id="thumbsDownVal">97</div>
+          </div>
+          <div class="kpi">
+            <div class="kpi-label">Avg latency</div>
+            <div class="kpi-value" id="avgLatencyVal">742 ms</div>
+          </div>
+        </div>
+
+        <div class="card chart-card">
+          <h3 class="card-title">Tokens &amp; cost, last 14 days</h3>
+          <p class="card-note">Each series is normalised to its own range. Hover a point for the actual value.</p>
+          <div class="chart-legend">
+            <span class="legend-item" data-series="tokens"><span class="legend-swatch" style="background:#E8A33C"></span>Tokens</span>
+            <span class="legend-item" data-series="cost"><span class="legend-swatch" style="background:#4FBD8C"></span>Cost</span>
+          </div>
+          <div id="chartHolder"></div>
+        </div>
+
+        <div class="card" style="margin-top: 20px;">
+          <h3 class="card-title">Live query log</h3>
+          <p class="card-note">Most recent queries against the knowledge base.</p>
+          <div class="log-feed" id="logFeed"></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+  /* ---------- Navigation ---------- */
+
+  var navItems = document.querySelectorAll('.nav-item');
+  var flowNodes = document.querySelectorAll('.flow-node');
+  var sections = document.querySelectorAll('.section');
+
+  function activateSection(target) {
+    sections.forEach(function (s) { s.classList.toggle('active', s.id === target); });
+    navItems.forEach(function (n) { n.classList.toggle('active', n.getAttribute('data-target') === target); });
+    flowNodes.forEach(function (n) { n.classList.toggle('active', n.getAttribute('data-target') === target); });
+  }
+
+  navItems.forEach(function (item) {
+    item.addEventListener('click', function () { activateSection(item.getAttribute('data-target')); });
+  });
+  flowNodes.forEach(function (node) {
+    node.addEventListener('click', function () { activateSection(node.getAttribute('data-target')); });
+  });
+
+  /* ---------- Section 01: Knowledge Base ---------- */
+
+  var dropzone = document.getElementById('dropzone');
+  var fileInput = document.getElementById('fileInput');
+  var docTableBody = document.getElementById('docTableBody');
+
+  dropzone.addEventListener('click', function () { fileInput.click(); });
+  ['dragover', 'dragleave', 'drop'].forEach(function (evt) {
+    dropzone.addEventListener(evt, function (e) {
+      e.preventDefault();
+      dropzone.classList.toggle('dragging', evt === 'dragover');
+    });
+  });
+
+  function addDocRow(name, size, source) {
+    var row = document.createElement('tr');
+    var today = new Date().toISOString().slice(0, 10);
+    row.innerHTML =
+      '<td>' + name + '</td>' +
+      '<td class="mono">' + size + '</td>' +
+      '<td class="mono">' + today + '</td>' +
+      '<td class="mono">' + source + '</td>' +
+      '<td><span class="badge badge-processing"><span class="badge-dot"></span>Processing</span></td>';
+    docTableBody.insertBefore(row, docTableBody.firstChild);
+    setTimeout(function () {
+      row.querySelector('td:last-child').innerHTML = '<span class="badge badge-success"><span class="badge-dot"></span>Success</span>';
+    }, 2200);
+  }
+
+  dropzone.addEventListener('drop', function (e) {
+    var files = e.dataTransfer.files;
+    for (var i = 0; i < files.length; i++) {
+      addDocRow(files[i].name, (files[i].size / 1024).toFixed(0) + ' KB', 'Upload');
+    }
+  });
+  fileInput.addEventListener('change', function () {
+    for (var i = 0; i < fileInput.files.length; i++) {
+      addDocRow(fileInput.files[i].name, (fileInput.files[i].size / 1024).toFixed(0) + ' KB', 'Upload');
+    }
+  });
+
+  document.getElementById('urlSyncBtn').addEventListener('click', function () {
+    var url = document.getElementById('urlInput').value.trim();
+    if (!url) return;
+    addDocRow(url.replace(/^https?:\/\//, ''), '-', 'Web');
+    document.getElementById('urlInput').value = '';
+  });
+
+  var chunkMethod = document.getElementById('chunkMethod');
+  var chunkOverlap = document.getElementById('chunkOverlap');
+  var chunkDesc = document.getElementById('chunkDesc');
+  var descriptions = {
+    fixed: 'Fixed size splits text into equal token blocks with a shared overlap between neighbours.',
+    semantic: 'Semantic chunking splits at natural topic boundaries. Overlap does not apply.'
+  };
+  chunkMethod.addEventListener('change', function () {
+    var isSemantic = chunkMethod.value === 'semantic';
+    chunkOverlap.disabled = isSemantic;
+    chunkDesc.textContent = descriptions[chunkMethod.value];
+  });
+
+  document.getElementById('chunkSize').addEventListener('input', function (e) {
+    document.getElementById('chunkSizeVal').textContent = e.target.value;
+  });
+  chunkOverlap.addEventListener('input', function (e) {
+    document.getElementById('chunkOverlapVal').textContent = e.target.value;
+  });
+
+  setTimeout(function () {
+    var row = document.getElementById('processingRow');
+    if (row) row.querySelector('td:last-child').innerHTML = '<span class="badge badge-success"><span class="badge-dot"></span>Success</span>';
+  }, 3000);
+
+  /* ---------- Section 02: Vector DB & Search ---------- */
+
+  var embedGroup = document.getElementById('embedGroup');
+  embedGroup.querySelectorAll('.radio-card').forEach(function (card) {
+    card.addEventListener('click', function () {
+      embedGroup.querySelectorAll('.radio-card').forEach(function (c) { c.classList.remove('selected'); });
+      card.classList.add('selected');
+    });
+  });
+
+  var searchDescriptions = {
+    semantic: 'Semantic search compares vector distance between the query and stored chunks.',
+    keyword: 'Keyword search matches exact terms using sparse BM25 scoring.',
+    hybrid: 'Hybrid search blends vector and keyword results with reciprocal rank fusion.'
+  };
+  var searchSegment = document.getElementById('searchSegment');
+  searchSegment.querySelectorAll('button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      searchSegment.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      document.getElementById('searchDesc').textContent = searchDescriptions[btn.getAttribute('data-value')];
+    });
+  });
+
+  var connected = true;
+  document.getElementById('reconnectBtn').addEventListener('click', function () {
+    var dot = document.getElementById('connDot');
+    var text = document.getElementById('connText');
+    connected = !connected;
+    dot.classList.toggle('off', !connected);
+    text.textContent = connected ? 'Connected' : 'Disconnected';
+    if (connected) {
+      var current = parseInt(document.getElementById('vectorCount').textContent.replace(/,/g, ''), 10);
+      document.getElementById('vectorCount').textContent = (current + Math.floor(Math.random() * 40)).toLocaleString();
+    }
+  });
+
+  /* ---------- Section 03: Retrieval Parameters ---------- */
+
+  document.getElementById('topK').addEventListener('input', function (e) {
+    document.getElementById('topKVal').textContent = e.target.value;
+  });
+  document.getElementById('threshold').addEventListener('input', function (e) {
+    document.getElementById('thresholdVal').textContent = parseFloat(e.target.value).toFixed(2);
+  });
+  document.getElementById('rerankToggle').addEventListener('change', function (e) {
+    document.getElementById('rerankModelField').style.display = e.target.checked ? 'block' : 'none';
+  });
+
+  /* ---------- Section 04: Prompt & Model Tuning ---------- */
+
+  var llmSegment = document.getElementById('llmSegment');
+  llmSegment.querySelectorAll('button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      llmSegment.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+    });
+  });
+
+  var tempDescriptions = [
+    { max: 0.2, text: 'Strict. Answers stay close to the retrieved context with minimal variation.' },
+    { max: 0.6, text: 'Balanced, mostly factual with some flexibility.' },
+    { max: 1.01, text: 'Creative. More varied phrasing, higher risk of drifting from the source text.' }
+  ];
+  document.getElementById('temperature').addEventListener('input', function (e) {
+    var val = parseFloat(e.target.value);
+    document.getElementById('tempVal').textContent = val.toFixed(2);
+    var match = tempDescriptions.find(function (d) { return val <= d.max; });
+    document.getElementById('tempDesc').textContent = match.text;
+  });
+  document.getElementById('maxTokens').addEventListener('input', function (e) {
+    document.getElementById('maxTokensVal').textContent = e.target.value;
+  });
+
+  var promptArea = document.getElementById('systemPrompt');
+  var charCount = document.getElementById('charCount');
+  function updateCharCount() { charCount.textContent = promptArea.value.length; }
+  promptArea.addEventListener('input', updateCharCount);
+  updateCharCount();
+
+  /* ---------- Section 05: Security & Access ---------- */
+
+  var docNames = [
+    'Vendor_Master_Agreement.pdf',
+    'Employee_Handbook_2026.docx',
+    'company-intranet.com/policies',
+    'Integration_Suite_Notes.md'
+  ];
+  var tagDocSelect = document.getElementById('tagDocSelect');
+  docNames.forEach(function (name, i) {
+    var opt = document.createElement('option');
+    opt.value = i; opt.textContent = name;
+    tagDocSelect.appendChild(opt);
+  });
+
+  var tagClassMap = { confidential: 'pill-confidential', public: 'pill-public', hr: 'pill-hr' };
+  var tagLabelMap = { confidential: 'Confidential', public: 'Public', hr: 'HR-Only' };
+
+  function wireRemoveButtons() {
+    document.querySelectorAll('.pill-remove').forEach(function (btn) {
+      btn.onclick = function () { btn.parentElement.remove(); };
+    });
+  }
+  wireRemoveButtons();
+
+  document.getElementById('addTagBtn').addEventListener('click', function () {
+    var docIndex = tagDocSelect.value;
+    var tagValue = document.getElementById('tagValueSelect').value;
+    var container = document.querySelector('.doc-tags[data-doc="' + docIndex + '"]');
+    var pill = document.createElement('span');
+    pill.className = 'pill ' + tagClassMap[tagValue];
+    pill.innerHTML = tagLabelMap[tagValue] + '<button class="pill-remove">&times;</button>';
+    container.appendChild(pill);
+    wireRemoveButtons();
+  });
+
+  var users = [
+    { name: 'Alice Chen', email: 'alice.chen@company.com', role: 'Content Manager' },
+    { name: 'Marcus Webb', email: 'marcus.webb@company.com', role: 'Super Admin' },
+    { name: 'Priya Patel', email: 'priya.patel@company.com', role: 'End User' },
+    { name: 'Jordan Ellis', email: 'jordan.ellis@company.com', role: 'End User' },
+    { name: 'Sofia Rossi', email: 'sofia.rossi@company.com', role: 'Content Manager' }
+  ];
+  var userTableBody = document.getElementById('userTableBody');
+
+  function renderUsers(filter) {
+    userTableBody.innerHTML = '';
+    users
+      .filter(function (u) {
+        var q = (filter || '').toLowerCase();
+        return u.name.toLowerCase().indexOf(q) > -1 || u.email.toLowerCase().indexOf(q) > -1;
+      })
+      .forEach(function (u) {
+        var row = document.createElement('tr');
+        row.innerHTML =
+          '<td>' + u.name + '<br><span class="mono" style="font-size:11px;">' + u.email + '</span></td>' +
+          '<td><select class="roleSelect"><option' + (u.role === 'Super Admin' ? ' selected' : '') + '>Super Admin</option>' +
+          '<option' + (u.role === 'Content Manager' ? ' selected' : '') + '>Content Manager</option>' +
+          '<option' + (u.role === 'End User' ? ' selected' : '') + '>End User</option></select></td>';
+        userTableBody.appendChild(row);
+      });
+  }
+  renderUsers('');
+  document.getElementById('userSearch').addEventListener('input', function (e) { renderUsers(e.target.value); });
+
+  /* ---------- Section 06: Observability ---------- */
+
+  var sampleQueries = [
+    { q: 'What is the notice period for contract termination?', chunks: 4, latency: 812 },
+    { q: 'How do I request parental leave?', chunks: 3, latency: 634 },
+    { q: 'What clearance level applies to the vendor agreement?', chunks: 2, latency: 501 },
+    { q: 'Summarise the Q2 financial highlights.', chunks: 5, latency: 940 },
+    { q: 'Who approves changes to the integration suite config?', chunks: 3, latency: 715 }
+  ];
+
+  var logFeed = document.getElementById('logFeed');
+
+  function renderLogRow(entry, isNew) {
+    var row = document.createElement('div');
+    row.className = 'log-row' + (isNew ? ' new' : '');
+    row.innerHTML =
+      '<div class="log-query">' + entry.q + '</div>' +
+      '<div class="log-meta"><span>' + entry.chunks + ' chunks retrieved</span><span class="log-latency">' + entry.latency + ' ms</span></div>';
+    return row;
+  }
+
+  sampleQueries.forEach(function (entry) { logFeed.appendChild(renderLogRow(entry, false)); });
+
+  var liveQueries = [
+    { q: 'Does the handbook cover remote work stipends?', chunks: 3 },
+    { q: 'What is the escalation path for a failed payment?', chunks: 2 },
+    { q: 'List the documents tagged HR-Only.', chunks: 4 }
+  ];
+  var liveIndex = 0;
+
+  setInterval(function () {
+    var base = liveQueries[liveIndex % liveQueries.length];
+    liveIndex++;
+    var entry = { q: base.q, chunks: base.chunks, latency: 500 + Math.floor(Math.random() * 500) };
+    var row = renderLogRow(entry, true);
+    logFeed.insertBefore(row, logFeed.firstChild);
+    while (logFeed.children.length > 8) { logFeed.removeChild(logFeed.lastChild); }
+  }, 6000);
+
+  var thumbsUp = 1284, thumbsDown = 97;
+  setInterval(function () {
+    if (Math.random() > 0.3) { thumbsUp += 1; document.getElementById('thumbsUpVal').textContent = thumbsUp.toLocaleString(); }
+    else { thumbsDown += 1; document.getElementById('thumbsDownVal').textContent = thumbsDown.toLocaleString(); }
+  }, 5000);
+
+  /* Chart: 14 days of tokens and cost, each normalised to its own range */
+
+  var days = ['6/25','6/26','6/27','6/28','6/29','6/30','7/1','7/2','7/3','7/4','7/5','7/6','7/7','7/8'];
+  var tokens = [52,58,49,63,71,68,74,80,77,85,90,83,88,94];
+  var cost = [11.2,12.4,10.6,13.8,15.1,14.6,16.0,17.2,16.5,18.1,19.4,17.8,18.9,20.2];
+
+  function normalise(arr) {
+    var min = Math.min.apply(null, arr), max = Math.max.apply(null, arr);
+    return arr.map(function (v) { return (v - min) / (max - min); });
+  }
+
+  var chartWidth = 1000, chartHeight = 220, padding = 24;
+  var tokensNorm = normalise(tokens);
+  var costNorm = normalise(cost);
+
+  function toPoints(norm) {
+    return norm.map(function (v, i) {
+      var x = padding + (i / (norm.length - 1)) * (chartWidth - padding * 2);
+      var y = chartHeight - padding - v * (chartHeight - padding * 2);
+      return [x, y];
+    });
+  }
+
+  var tokenPoints = toPoints(tokensNorm);
+  var costPoints = toPoints(costNorm);
+
+  function pathFor(points) {
+    return points.map(function (p, i) { return (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
+  }
+
+  function circlesFor(points, values, unit, colorClass) {
+    return points.map(function (p, i) {
+      return '<circle class="point ' + colorClass + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3.5" fill="currentColor">' +
+        '<title>' + days[i] + ': ' + values[i] + unit + '</title></circle>';
+    }).join('');
+  }
+
+  var svg =
+    '<svg viewBox="0 0 ' + chartWidth + ' ' + chartHeight + '" width="100%" height="220" style="overflow:visible;">' +
+    '<g id="gridLines"></g>' +
+    '<g id="tokensGroup" style="color:#E8A33C;">' +
+      '<path d="' + pathFor(tokenPoints) + '" fill="none" stroke="currentColor" stroke-width="2"></path>' +
+      circlesFor(tokenPoints, tokens, 'k tokens', 'tokens') +
+    '</g>' +
+    '<g id="costGroup" style="color:#4FBD8C;">' +
+      '<path d="' + pathFor(costPoints) + '" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="4 3"></path>' +
+      circlesFor(costPoints, cost, ' USD', 'cost') +
+    '</g>' +
+    '</svg>';
+
+  document.getElementById('chartHolder').innerHTML = svg;
+
+  document.querySelectorAll('.legend-item').forEach(function (item) {
+    item.addEventListener('click', function () {
+      var series = item.getAttribute('data-series');
+      var group = document.getElementById(series + 'Group');
+      var hidden = group.style.display === 'none';
+      group.style.display = hidden ? '' : 'none';
+      item.classList.toggle('hidden', !hidden);
+    });
+  });
+
+  document.querySelectorAll('.point').forEach(function (c) {
+    c.style.transition = 'r 0.12s ease';
+    c.addEventListener('mouseenter', function () { c.setAttribute('r', 6); });
+    c.addEventListener('mouseleave', function () { c.setAttribute('r', 3.5); });
+  });
+
+});
+</script>
+
+</body>
+</html>

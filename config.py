@@ -8,7 +8,10 @@ the stored vectors no longer live in a comparable space.
 """
 
 import os
+from dotenv import load_dotenv
 from pathlib import Path
+
+load_dotenv()
 
 SOURCE_FOLDER = Path("./documents")
 CHROMA_DIR = Path("./chroma_db")
