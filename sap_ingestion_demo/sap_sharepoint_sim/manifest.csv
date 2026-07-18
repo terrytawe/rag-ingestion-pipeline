@@ -1,0 +1,5 @@
+filename,doc_type,bukrs,vkorg,actvt,title
+cppr_1001.txt,CPPR,1000,,03,Change Prioritisation Report BU1000 Q1
+cppr_1002.txt,CPPR,2000,,03,Change Prioritisation Report BU2000 Q1
+cps_2001.txt,CPS,1000,3000,03,Project Status Summary Alpha
+cps_2002.txt,CPS,,4000,03,Project Status Summary Beta

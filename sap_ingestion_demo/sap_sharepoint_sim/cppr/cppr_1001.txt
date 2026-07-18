@@ -1,0 +1,21 @@
+Document Type: CPPR
+Reference: CPPR-1000-Q1
+Business Unit: 1000
+
+Summary
+
+This document records the prioritisation outcomes for change requests raised
+against the finance module during the reporting period. Requests were scored
+against business impact, implementation effort and regulatory deadline
+proximity.
+
+Findings
+
+Three requests were escalated for steering committee review. Two were
+deferred to the following quarter due to resourcing constraints. One was
+approved for immediate implementation following a risk assessment.
+
+Recommendation
+
+Proceed with the approved request under standard change control procedures.
+Revisit deferred items at the start of the next quarter.

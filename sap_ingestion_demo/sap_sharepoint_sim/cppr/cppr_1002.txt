@@ -1,0 +1,21 @@
+Document Type: CPPR
+Reference: CPPR-2000-Q1
+Business Unit: 2000
+
+Summary
+
+This document records the prioritisation outcomes for change requests raised
+against the logistics module during the reporting period. Requests were
+scored against business impact, implementation effort and downstream system
+dependencies.
+
+Findings
+
+Four requests were reviewed. One was rejected due to insufficient business
+case. Three were approved with staged rollout dates across the next two
+quarters.
+
+Recommendation
+
+Proceed with staged rollout as scheduled. Reassess the rejected request if
+the business case is resubmitted with updated cost estimates.

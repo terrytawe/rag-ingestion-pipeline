@@ -1,0 +1,21 @@
+Document Type: CPS
+Reference: CPS-4000-BETA
+Sales Organisation: 4000
+
+Summary
+
+This document tracks the status of Project Beta, a sales operations
+initiative focused on order processing automation. The project is currently
+one sprint behind the original plan.
+
+Status
+
+Milestone 1 (requirements sign-off): complete.
+Milestone 2 (integration testing): in progress, delayed by two weeks due to
+a dependency on an external vendor API update.
+Milestone 3 (user acceptance testing): not started.
+
+Risks
+
+The vendor API delay is the primary schedule risk. A contingency plan using
+a temporary manual workaround is under review.

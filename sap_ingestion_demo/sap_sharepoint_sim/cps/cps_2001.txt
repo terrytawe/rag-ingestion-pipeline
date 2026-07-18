@@ -1,0 +1,22 @@
+Document Type: CPS
+Reference: CPS-1000-3000-ALPHA
+Business Unit: 1000
+Sales Organisation: 3000
+
+Summary
+
+This document tracks the status of Project Alpha, a cross-functional
+initiative spanning finance and sales operations. The project remains on
+schedule with two milestones completed this reporting period.
+
+Status
+
+Milestone 1 (requirements sign-off): complete.
+Milestone 2 (integration testing): complete.
+Milestone 3 (user acceptance testing): in progress, expected completion
+within four weeks.
+
+Risks
+
+A staffing gap in the testing team has been flagged as a moderate risk to
+the milestone 3 timeline.
